@@ -130,13 +130,13 @@ plot(Cp(1),Cp(2),'*');
 V1=(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i)/abs(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i);
 V2=(End_x1 - Cp(1) + (End_y1-Cp(2))*i)/abs(End_x1 - Cp(1) + (End_y1-Cp(2))*i);
 Vplus1=50*(V1+V2);
-Intetrochanter_x1=Cp(1)-abs((real(Vplus1)));
-Intetrochanter_y1=Cp(2)+abs(imag(Vplus1));
+Intetrochanter_x1=Cp(1)+real(Vplus1);
+Intetrochanter_y1=Cp(2)+imag(Vplus1);
 %line([Cp(1),Intetrochanter_x1],[Cp(2),Intetrochanter_y1]);
 
 Vplus2=-Vplus1;
-Intetrochanter_x2=abs(real(Vplus2))+Cp(1);
-Intetrochanter_y2=Cp(2)-abs(imag(Vplus2));
+Intetrochanter_x2=Cp(1)+real(Vplus2);
+Intetrochanter_y2=Cp(2)+imag(Vplus2);
 line([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]);
 
 line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
