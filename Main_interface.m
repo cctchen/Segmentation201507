@@ -169,21 +169,23 @@ Segout = I;
 Segout(BWoutline) = 255;
 axes(handles.axes2);
 handles.BWoutline=BWoutline;
+handles.I=I;
 guidata(hObject,handles);
 imshow(BWoutline); hold on
 
 
 % --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
+axes(handles.axes2);
 % read two curves
 Low_rect = getrect;
-Low_rect = round(Low_rect);
+Low_rect = round(Low_rect); %transfer into integer
 Lminx=Low_rect(1);
 Lmaxx=Low_rect(1) + Low_rect(3);
 Lminy=Low_rect(2);
 Lmaxy=Low_rect(2) + Low_rect(4);
-[Ly,Lx]=find(handles.BWoutline([Lminy:Lmaxy],[Lminx:Lmaxx]));
-Lx=Lx+Lminx-1;
+[Ly,Lx]=find(handles.BWoutline([Lminy:Lmaxy],[Lminx:Lmaxx]));%find the location where the value>0
+Lx=Lx+Lminx-1; %transfer into the local coordinate
 Ly=Ly+Lminy-1;
 
 High_rect = getrect;
@@ -209,7 +211,7 @@ d_min=Inf;
 
 for i_L=1:size_L
     for j_H=1:size_H
-        tmpd = (Lx(i_L) - Hx(j_H))^2 + (Ly(i_L) - Hy(j_H))^2;
+        tmpd = (Lx(i_L) - Hx(j_H))^2 + (Ly(i_L) - Hy(j_H))^2;%distance between two points
         if(tmpd<d_min)
             d_min=tmpd;
             Px_L=Lx(i_L);
@@ -223,20 +225,20 @@ end
 plot([Px_L, Px_H], [Py_L, Py_H], 'r*-'); hold on
 
 seta = atan(abs(Py_H-Py_L)/abs(Px_H-Px_L));
-seta = (pi/2) - seta;
-M_x=round((Px_H + Px_L)/2);
+seta = (pi/2) - seta; %calculat the angle of the perpendicular line
+M_x=round((Px_H + Px_L)/2); % the center of the nearest femur neck
 M_y=round((Py_H + Py_L)/2);
 
 %get perpendicular line
 Length_F=70;
-End_x1 = M_x - round(cos(seta)*Length_F);
+End_x1 = M_x - round(cos(seta)*Length_F);%sin(seta)=(delta y)/70,so delta y=70*sin(seta),similarly, delta x=70*cos(seta)
 End_y1 = M_y - round(sin(seta)*Length_F);
 End_x2 = M_x + round(cos(seta)*Length_F);
 End_y2 = M_y + round(sin(seta)*Length_F);
 
-plot([End_x1, End_x2], [End_y1, End_y2], 'r*-');
+plot([End_x1, End_x2], [End_y1, End_y2], 'r-');
 
-%Find midle line at the end
+%Find axis of the femur shaft
 End_rect = getrect;
 End_rect = round(End_rect);
 End_minx=End_rect(1);
@@ -257,31 +259,44 @@ for i_E=End_miny:End_maxy
     end
 end
 E_n=E_n-1;
-Mid_x(1,1:E_n-1)=round(min(Mid_x));
+Mid_x(1:E_n)=round(min(Mid_x));
 plot([Mid_x(1),Mid_x(E_n)],[Mid_y(1)-70,Mid_y(E_n)],  'g-');
 
-%find crosspoint
+%find crosspoint between shaft axis and neck axis
+%using two points deciding one line, creat two line functions, then calculate their public solution which is the crosspoint(using matris method) 
 PA=[Mid_y(E_n)-Mid_y(1), Mid_x(1)-Mid_x(E_n); End_y2 - End_y1, End_x1 - End_x2];
 PB=[((Mid_y(E_n)-Mid_y(1))*Mid_x(1) - (Mid_x(E_n)-Mid_x(1))*Mid_y(1)); ((End_y2 - End_y1)*End_x1 -(End_x2 - End_x1)*End_y1)];
-[Cp]=PA\PB;
+[Cp]=PA\PB;% left multiply
 Cp=round(abs(Cp));
 plot(Cp(1),Cp(2),'*');
 
-V1=(Mid_x(1) - Cp(1) + (Cp(2) - (Mid_y(1)-70))*i)/abs(Mid_x(1) - Cp(1) + (Cp(2) - (Mid_y(1)-70))*i);
-V2=(End_x2 - Cp(1) + ( Cp(2) - End_y2 )*i)/abs(End_x2 - Cp(1) + (Cp(2) - End_y2 )*i);
+%V1=(Mid_x(1) - Cp(1) + (Cp(2) - (Mid_y(1)-70))*i)/abs(Mid_x(1) - Cp(1) + (Cp(2) - (Mid_y(1)-70))*i);
+%V2=(End_x2 - Cp(1) + ( Cp(2) - End_y2 )*i)/abs(End_x2 - Cp(1) + (Cp(2) - End_y2 )*i);
+%Vplus1=50*(V1+V2);
+%Intetrochanter_x1=real(Vplus1)+Cp(1);
+%Intetrochanter_y1=Cp(2)-imag(Vplus1);
+%line([Cp(1),Intetrochanter_x1],[Cp(2),Intetrochanter_y1]);
+
+V1=(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i)/abs(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i);
+V2=(End_x1 - Cp(1) + (End_y1-Cp(2))*i)/abs(End_x1 - Cp(1) + (End_y1-Cp(2))*i);
 Vplus1=50*(V1+V2);
-Intetrochanter_x1=real(Vplus1)+Cp(1);
-Intetrochanter_y1=Cp(2)-imag(Vplus1);
-line([Cp(1),Intetrochanter_x1],[Cp(2),Intetrochanter_y1]);
+Intetrochanter_x1=Cp(1)+real(Vplus1);
+Intetrochanter_y1=Cp(2)+imag(Vplus1);
+%line([Cp(1),Intetrochanter_x1],[Cp(2),Intetrochanter_y1]);
 
-V3=(Mid_x(E_n) - Cp(1) + (Cp(2) - (Mid_y(E_n)))*i)/abs(Mid_x(E_n) - Cp(1) + (Cp(2) - (Mid_y(E_n)))*i);
-V4=(End_x1 - Cp(1) + ( Cp(2) - End_y1 )*i)/abs(End_x1 - Cp(1) + (Cp(2) - End_y1 )*i);
-Vplus2=50*(V3+V4);
-Intetrochanter_x2=real(Vplus2)+Cp(1);
-Intetrochanter_y2=Cp(2)-imag(Vplus2);
-line([Cp(1),Intetrochanter_x2],[Cp(2),Intetrochanter_y2]);
+Vplus2=-Vplus1;
+Intetrochanter_x2=Cp(1)+real(Vplus2);
+Intetrochanter_y2=Cp(2)+imag(Vplus2);
+line([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]);
 
-
+line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
+axes(handles.axes2);
+imshow(handles.I+im2uint16(handles.BWoutline));hold on
+plot([Px_L, Px_H], [Py_L, Py_H], 'r*-'); hold on
+plot([End_x1, End_x2], [End_y1, End_y2], 'r-');
+plot([Cp(1),Mid_x(E_n)],[Cp(2)-20,Mid_y(E_n)],  'g-');
+plot(Cp(1),Cp(2),'*');
+line([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]);
 line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
 % hObject    handle to pushbutton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
