@@ -316,6 +316,7 @@ shafty=shafty+Cp(2)+round(1.5*sqrt(d_min))-1;
 
 %line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
 plot(shaftx,shafty,'*');
+
 axes(handles.axes2);
 imshow(handles.I+im2uint16(handles.BWoutline));hold on
 plot([Px_L, Px_H], [Py_L, Py_H], 'r*-'); hold on
@@ -331,6 +332,7 @@ axes(handles.axes4);
 improfile(handles.I, [Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]);
 axes(handles.axes5);
 improfile(handles.I, shaftx,shafty);
+%improfile(handles.I,[perpen_x1, perpen_x2], [perpen_y1, perpen_y2]);
 set(handles.edit1,'string',strcat('NFN_L_x=',int2str(Px_L),', NFN_L_y=',int2str(Py_L),'; NFN_H_x=',int2str(Px_H),', NFN_H_y=',int2str(Py_H)));
 set(handles.edit2,'string',strcat('IT_L_x=',int2str(Intetrochanter_x1),', IT_L_y=',int2str(Intetrochanter_y1),'; IT_H_x=',int2str(Intetrochanter_x2),', IT_H_y=',int2str(Intetrochanter_y2)));
 set(handles.edit3,'string',strcat('FS_L_x=',int2str(shaftx(1)),', FS_L_y=',int2str(shafty(1)),'; FS_R_x=',int2str(shaftx(2)),', FS_R_y=',int2str(shafty(2))));
