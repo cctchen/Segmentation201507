@@ -22,7 +22,7 @@ function varargout = Main_interface(varargin)
 
 % Edit the above text to modify the response to help Main_interface
 
-% Last Modified by GUIDE v2.5 30-Jul-2015 23:51:57
+% Last Modified by GUIDE v2.5 31-Jul-2015 21:45:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -170,6 +170,8 @@ Segout = I;
 Segout(BWoutline) = 255;
 axes(handles.axes2);
 handles.BWoutline=BWoutline;
+[tmp,size_outl]=size(handles.BWoutline);
+handles.size_outl=size_outl;
 handles.I=I;
 guidata(hObject,handles);
 imshow(BWoutline); hold on
@@ -234,11 +236,42 @@ M_x=round((Px_H + Px_L)/2); % the center of the nearest femur neck
 M_y=round((Py_H + Py_L)/2);
 
 %get perpendicular line
-Length_F=70;
-perpen_x1 = M_x - round(cos(seta)*Length_F);%sin(seta)=(delta y)/70,so delta y=70*sin(seta),similarly, delta x=70*cos(seta)
-perpen_y1 = M_y - round(sin(seta)*Length_F);
-perpen_x2 = M_x + round(cos(seta)*Length_F);
-perpen_y2 = M_y + round(sin(seta)*Length_F);
+
+V_neck=(Px_H - M_x + (Py_H - M_y)*i)/abs((Px_H - M_x + (Py_H - M_y)*i));
+V_axis=-V_neck*i;
+
+perpen_x1 = round((Px_L + Px_H)/2);
+perpen_y1 = round((Py_L + Py_H)/2);
+perpen_x2 = round((Px_L + Px_H)/2);
+perpen_y2 = round((Py_L + Py_H)/2);
+
+r=1;
+while((perpen_x1 > 1) && (perpen_x1 < handles.size_outl) && (handles.BWoutline(perpen_y1,perpen_x1) ~= 1))
+    Vd=r*V_axis;
+    perpen_x1=round((Px_L + Px_H)/2 + real(Vd));
+    perpen_y1=round((Py_L + Py_H)/2 + imag(Vd)); % along the vector to find the edge
+    if ((handles.BWoutline(perpen_y1+1,perpen_x1) == 1) && (handles.BWoutline(perpen_y1,perpen_x1+1) == 1))
+        break;
+    end
+    r=r+0.5;
+end
+
+r=-1;
+while((perpen_x2 > 1) && (perpen_x2 < handles.size_outl) && (handles.BWoutline(perpen_y2,perpen_x2) ~= 1))
+    Vd=r*V_axis;
+    perpen_x2=round((Px_L + Px_H)/2+real(Vd));
+    perpen_y2=round((Py_L + Py_H)/2+imag(Vd)); % along the vector to find the edge
+    if ((handles.BWoutline(perpen_y2+1,perpen_x2) == 1) && (handles.BWoutline(perpen_y2,perpen_x2-1) == 1))
+        break;
+    end
+    r=r-0.5;
+end
+
+%Length_F=70;
+%perpen_x1 = M_x - round(cos(seta)*Length_F);%sin(seta)=(delta y)/70,so delta y=70*sin(seta),similarly, delta x=70*cos(seta)
+%perpen_y1 = M_y - round(sin(seta)*Length_F);
+%perpen_x2 = M_x + round(cos(seta)*Length_F);
+%perpen_y2 = M_y + round(sin(seta)*Length_F);
 
 plot([perpen_x1, perpen_x2], [perpen_y1, perpen_y2], 'r-');
 
@@ -287,24 +320,30 @@ plot(Cp(1),Cp(2),'*');
 V1=(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i)/abs(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i);%get the unit vector of the two line
 V2=(perpen_x1 - Cp(1) + (perpen_y1-Cp(2))*i)/abs(perpen_x1 - Cp(1) + (perpen_y1-Cp(2))*i);
 
-[tmp,size_outl]=size(handles.BWoutline);
 Intetrochanter_x1=Cp(1);
 Intetrochanter_y1=Cp(2);
 r=1; 
-while((Intetrochanter_x1 < size_outl) && (Intetrochanter_x1 > 0) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1) ~= 1))
+while((Intetrochanter_x1 < handles.size_outl) && (Intetrochanter_x1 > 0) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1) ~= 1))
     Vplus1=r*(V1+V2);
     Intetrochanter_x1=round(Cp(1)+real(Vplus1));
     Intetrochanter_y1=round(Cp(2)+imag(Vplus1)); % along the vector to find the edge
+    if ((handles.BWoutline(Intetrochanter_y1-1,Intetrochanter_x1) == 1) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1+1) == 1))
+        break;
+    end
     r=r+0.5;
 end
 %line([Cp(1),Intetrochanter_x1],[Cp(2),Intetrochanter_y1]);
+
 r=-1;
 Intetrochanter_x2=Cp(1);
 Intetrochanter_y2=Cp(2);
-while((Intetrochanter_x2 < size_outl) && (Intetrochanter_x2 > 0) && handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2) ~= 1)
+while((Intetrochanter_x2 < handles.size_outl) && (Intetrochanter_x2 > 0) && handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2) ~= 1)
     Vplus2=r*(V1+V2);
     Intetrochanter_x2=round(Cp(1)+real(Vplus2));
     Intetrochanter_y2=round(Cp(2)+imag(Vplus2));
+    if ((handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2-1) == 1) && (handles.BWoutline(Intetrochanter_y2+1,Intetrochanter_x2) == 1))
+        break;
+    end
     r=r-0.5;
 end
 
@@ -315,13 +354,13 @@ plot([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]
 shafty=shafty+Cp(2)+round(1.5*sqrt(d_min))-1;
 
 %line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
-plot(shaftx,shafty,'*');
 axes(handles.axes2);
 imshow(handles.I+im2uint16(handles.BWoutline));hold on
 plot([Px_L, Px_H], [Py_L, Py_H], 'r*-'); hold on
 plot([perpen_x1, perpen_x2], [perpen_y1, perpen_y2], 'r-');
 plot([Cp(1),Mid_x(E_n)],[Cp(2)-20,Mid_y(E_n)],  'g-');
 plot(Cp(1),Cp(2),'*');
+
 plot([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2], '*-');
 %line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
 plot(shaftx,shafty,'r*-');
@@ -331,10 +370,43 @@ axes(handles.axes4);
 improfile(handles.I, [Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2]);
 axes(handles.axes5);
 improfile(handles.I, shaftx,shafty);
+
+%find head coordinator
+axes(handles.axes2);
+set(handles.text1,'string','Select head area');
+head_rec=getrect;
+head_rec = round(head_rec);
+head_minx=head_rec(1);
+head_maxx=head_rec(1) + head_rec(3);
+head_miny=head_rec(2);
+head_maxy=head_rec(2) + head_rec(4);
+to_head_x = round((Px_L + Px_H)/2);
+to_head_y = round((Py_L + Py_H)/2);
+r=1;
+min_p=inf;
+head_x=0;
+head_y=0;
+while((to_head_x > 1) && (to_head_x < handles.size_outl) && (handles.BWoutline(to_head_y,to_head_x) ~= 1))
+    Vd=r*V_axis;
+    to_head_x=round((Px_L + Px_H)/2 + real(Vd));
+    to_head_y=round((Py_L + Py_H)/2 + imag(Vd)); % along the vector to find the edge
+    if ((handles.BWoutline(to_head_y+1,to_head_x) == 1) && (handles.BWoutline(to_head_y,to_head_x+1) == 1))
+        break;
+    end
+    if((to_head_x >= head_minx) && (to_head_x <= head_maxx) && (to_head_y >= head_miny) && (to_head_y <= head_maxy) && (handles.I(to_head_y,to_head_x)<min_p))
+        min_p=handles.I(to_head_y,to_head_x);
+        head_x=to_head_x;
+        head_y=to_head_y;
+    end
+    r=r+0.5;
+end
+set(handles.text1,'string','');
+plot(head_x,head_y,'*');
+
 set(handles.edit1,'string',strcat('NFN_L_x=',int2str(Px_L),', NFN_L_y=',int2str(Py_L),'; NFN_H_x=',int2str(Px_H),', NFN_H_y=',int2str(Py_H)));
 set(handles.edit2,'string',strcat('IT_L_x=',int2str(Intetrochanter_x1),', IT_L_y=',int2str(Intetrochanter_y1),'; IT_H_x=',int2str(Intetrochanter_x2),', IT_H_y=',int2str(Intetrochanter_y2)));
 set(handles.edit3,'string',strcat('FS_L_x=',int2str(shaftx(1)),', FS_L_y=',int2str(shafty(1)),'; FS_R_x=',int2str(shaftx(2)),', FS_R_y=',int2str(shafty(2))));
-
+set(handles.edit4,'string',strcat('HEAD_x=',int2str(head_x),', HEAD_y=',int2str(head_y),'; MIT_x=',int2str(Cp(1)),', MIT_y=',int2str(Cp(2))));
 % hObject    handle to pushbutton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -397,6 +469,29 @@ function edit3_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function edit3_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to edit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit4_Callback(hObject, eventdata, handles)
+% hObject    handle to edit4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit4 as text
+%        str2double(get(hObject,'String')) returns contents of edit4 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
