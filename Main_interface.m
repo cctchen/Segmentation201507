@@ -22,7 +22,7 @@ function varargout = Main_interface(varargin)
 
 % Edit the above text to modify the response to help Main_interface
 
-% Last Modified by GUIDE v2.5 31-Jul-2015 21:45:54
+% Last Modified by GUIDE v2.5 03-Aug-2015 16:44:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -85,6 +85,7 @@ for ii=1:filenumber
 end
 set(handles.listbox1,'string',Dicom_name);%set the name of string to 'listbox1',which can display the name list in the box1
 handles.Dicom_list=Dicom_list;%seems like put 'Dicom_list'into 'handls'.handles like a capacity ,can include lots things,and it serves for all function.
+handles.Dicom_name=Dicom_name;
 guidata(hObject,handles);%save those things into this two capacity.
 % hObject    handle to pushbutton1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -101,6 +102,7 @@ p_Dilate=get(handles.slider1,'value');%when creat 'slider1',it has been given a 
 handles.p_Dilate=p_Dilate;
 handles.index_selected=index_selected;
 guidata(hObject,handles);
+handles.Image_name=handles.Dicom_name(index_selected);
 get_outline(hObject, handles, p_Dilate);
 
 % hObject    handle to listbox1 (see GCBO)
@@ -179,6 +181,12 @@ imshow(BWoutline); hold on
 
 % --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
+FUC=1.073;
+INTERCEPT=-1024.3;
+SLOP=1.2882;
+Pixel_scale=0.97656e-3;
+mu=0.4;
+
 axes(handles.axes2);
 % read two curves
 set(handles.text1,'string','Select low neck arc.');
@@ -235,6 +243,62 @@ seta = (pi/2) - seta; %calculat the angle of the perpendicular line
 M_x=round((Px_H + Px_L)/2); % the center of the nearest femur neck
 M_y=round((Py_H + Py_L)/2);
 
+%calculate EI_FN
+V1=(Px_L - M_x + (Py_L - M_y)*i)/abs(Px_L - M_x + (Py_L - M_y)*i);
+V2=(Px_H - M_x + (Py_H - M_y)*i)/abs(Px_H - M_x + (Py_H - M_y)*i);
+
+r=1;
+nfn_x1=M_x;
+nfn_y1=M_y;
+ei_px=nfn_x1;
+ei_py=nfn_y1;
+rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+EA_FN=double(double(E)*double(Pixel_scale^2));
+EI_FN = 0;
+while((nfn_x1 < handles.size_outl) && (nfn_x1 > 0) && (handles.BWoutline(nfn_y1,nfn_x1) ~= 1))
+    Vplus1=r*V1;
+    nfn_x1=round(M_x + real(Vplus1));
+    nfn_y1=round(M_y + imag(Vplus1)); % along the vector to find the edge
+    if((nfn_x1 ~=ei_px) || (nfn_y1 ~= ei_py ))
+        ei_px=nfn_x1;
+        ei_py=nfn_y1;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+        EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
+        EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+    end
+    if ((handles.BWoutline(nfn_y1-1,nfn_x1) == 1) && (handles.BWoutline(nfn_y1,nfn_x1+1) == 1))
+        break;
+    end
+    r=r+0.5;
+end
+
+r=1;
+nfn_x2=M_x;
+nfn_y2=M_y;
+ei_px=nfn_x2;
+ei_py=nfn_y2;
+while((nfn_x2 < handles.size_outl) && (nfn_x2 > 0) && handles.BWoutline(nfn_y2,nfn_x2) ~= 1)
+    Vplus2=r*V2;
+    nfn_x2=round(M_x + real(Vplus2));
+    nfn_y2=round(M_y + imag(Vplus2));
+    if((nfn_x2 ~=ei_px) || (nfn_y2 ~= ei_py ))
+        ei_px=nfn_x2;
+        ei_py=nfn_y2;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=(double(29.8)*(double((1e-3))*double(rou))^1.56)*1e9;
+        EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
+        EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+    end
+    if ((handles.BWoutline(nfn_y2,nfn_x2-1) == 1) && (handles.BWoutline(nfn_y2+1,nfn_x2) == 1))
+        break;
+    end
+    r=r+0.5;
+end
+GA_FN=EA_FN/(2*(1+mu));
+set(handles.text15,'string',num2str(EI_FN));
+
 %get perpendicular line
 
 V_neck=(Px_H - M_x + (Py_H - M_y)*i)/abs((Px_H - M_x + (Py_H - M_y)*i));
@@ -275,7 +339,6 @@ end
 
 plot([perpen_x1, perpen_x2], [perpen_y1, perpen_y2], 'r-');
 
-
 %Find axis of the femur shaft
 set(handles.text1,'string','Select Shaft area');
 shaft_rect = getrect;
@@ -300,7 +363,7 @@ for i_E=shaft_miny:shaft_maxy
 end
 E_n=E_n-1;
 Mid_x(1:E_n)=round(min(Mid_x));
-plot([Mid_x(1),Mid_x(E_n)],[Mid_y(1)-70,Mid_y(E_n)],  'g-');
+%plot([Mid_x(1),Mid_x(E_n)],[Mid_y(1)-70,Mid_y(E_n)],  'g-');
 
 %find crosspoint between shaft axis and neck axis
 %using two points deciding one line, creat two line functions, then calculate their public solution which is the crosspoint(using matris method) 
@@ -320,13 +383,27 @@ plot(Cp(1),Cp(2),'*');
 V1=(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i)/abs(Mid_x(E_n) - Cp(1) + ((Mid_y(E_n))-Cp(2))*i);%get the unit vector of the two line
 V2=(perpen_x1 - Cp(1) + (perpen_y1-Cp(2))*i)/abs(perpen_x1 - Cp(1) + (perpen_y1-Cp(2))*i);
 
+r=1;
 Intetrochanter_x1=Cp(1);
 Intetrochanter_y1=Cp(2);
-r=1; 
+ei_px=Intetrochanter_x1;
+ei_py=Intetrochanter_y1;
+rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+EA_IT=double(double(E)*double(Pixel_scale^2));
+EI_IT = 0;
 while((Intetrochanter_x1 < handles.size_outl) && (Intetrochanter_x1 > 0) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1) ~= 1))
     Vplus1=r*(V1+V2);
     Intetrochanter_x1=round(Cp(1)+real(Vplus1));
     Intetrochanter_y1=round(Cp(2)+imag(Vplus1)); % along the vector to find the edge
+    if((Intetrochanter_x1 ~=ei_px) || (Intetrochanter_y1 ~= ei_py ))
+        ei_px=Intetrochanter_x1;
+        ei_py=Intetrochanter_y1;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+        EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
+        EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+    end
     if ((handles.BWoutline(Intetrochanter_y1-1,Intetrochanter_x1) == 1) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1+1) == 1))
         break;
     end
@@ -337,21 +414,82 @@ end
 r=-1;
 Intetrochanter_x2=Cp(1);
 Intetrochanter_y2=Cp(2);
+ei_px=Intetrochanter_x2;
+ei_py=Intetrochanter_y2;
 while((Intetrochanter_x2 < handles.size_outl) && (Intetrochanter_x2 > 0) && handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2) ~= 1)
     Vplus2=r*(V1+V2);
     Intetrochanter_x2=round(Cp(1)+real(Vplus2));
     Intetrochanter_y2=round(Cp(2)+imag(Vplus2));
+    if((Intetrochanter_x2 ~=ei_px) || (Intetrochanter_y2 ~= ei_py ))
+        ei_px=Intetrochanter_x2;
+        ei_py=Intetrochanter_y2;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+        EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
+        EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+    end
     if ((handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2-1) == 1) && (handles.BWoutline(Intetrochanter_y2+1,Intetrochanter_x2) == 1))
         break;
     end
     r=r-0.5;
 end
-
+GA_IT=EA_IT/(2*(1+mu));
+set(handles.text16,'string',num2str(EI_IT,3));
 plot([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2], '*-');
 
 [shafty,shaftx]=find(handles.BWoutline(Cp(2)+round(1.5*sqrt(d_min)),:));%find the two points of the shaft line
 
 shafty=shafty+Cp(2)+round(1.5*sqrt(d_min))-1;
+
+%calculate EI_FS
+V1=1;
+V2=-1;
+
+r=1;
+fs_x1=Cp(1);
+fs_y1=shafty(1);
+ei_px=fs_x1;
+ei_py=fs_y1;
+rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+EA_FS=double(double(E)*double(Pixel_scale^2));
+EI_FS = 0;
+while((fs_x1 < handles.size_outl) && (fs_x1 > 0) && (handles.BWoutline(fs_y1,fs_x1) ~= 1))
+    Vplus1=r*V1;
+    fs_x1=round(M_x + real(Vplus1));
+    fs_y1=round(M_y + imag(Vplus1)); % along the vector to find the edge
+    if((fs_x1 ~=ei_px) || (fs_y1 ~= ei_py ))
+        ei_px=fs_x1;
+        ei_py=fs_y1;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+        EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
+        EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+    end
+    r=r+0.5;
+end
+
+r=1;
+fs_x2=Cp(1);
+fs_y2=shafty(1);
+ei_px=fs_x2;
+ei_py=fs_y2;
+while((fs_x2 < handles.size_outl) && (fs_x2 > 0) && handles.BWoutline(fs_y2,fs_x2) ~= 1)
+    Vplus2=r*V2;
+    fs_x2=round(M_x + real(Vplus2));
+    fs_y2=round(M_y + imag(Vplus2));
+    if((fs_x2 ~=ei_px) || (fs_y2 ~= ei_py ))
+        ei_px=fs_x2;
+        ei_py=fs_y2;
+        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+        EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
+        EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+    end
+    r=r+0.5;
+end
+GA_FS=EA_FS/(2*(1+mu));
+set(handles.text17,'string',num2str(EI_FS,3));
 
 %line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
 axes(handles.axes2);
@@ -407,6 +545,35 @@ set(handles.edit1,'string',strcat('NFN_L_x=',int2str(Px_L),', NFN_L_y=',int2str(
 set(handles.edit2,'string',strcat('IT_L_x=',int2str(Intetrochanter_x1),', IT_L_y=',int2str(Intetrochanter_y1),'; IT_H_x=',int2str(Intetrochanter_x2),', IT_H_y=',int2str(Intetrochanter_y2)));
 set(handles.edit3,'string',strcat('FS_L_x=',int2str(shaftx(1)),', FS_L_y=',int2str(shafty(1)),'; FS_R_x=',int2str(shaftx(2)),', FS_R_y=',int2str(shafty(2))));
 set(handles.edit4,'string',strcat('HEAD_x=',int2str(head_x),', HEAD_y=',int2str(head_y),'; MIT_x=',int2str(Cp(1)),', MIT_y=',int2str(Cp(2))));
+
+handles.Image_name=char(handles.Dicom_name(handles.index_selected));
+handles.EA_FN=num2str(EA_FN);
+handles.EA_IT=num2str(EA_IT);
+handles.EA_FS=num2str(EA_FS);
+handles.EI_FN=num2str(EI_FN);
+handles.EI_IT=num2str(EI_IT);
+handles.EI_FS=num2str(EI_FS);
+handles.GA_FN=num2str(GA_FN);
+handles.GA_IT=num2str(GA_IT);
+handles.GA_FS=num2str(GA_FS);
+handles.FN1_x=num2str(Px_L);
+handles.FN1_y=num2str(Py_L);
+handles.FN2_x=num2str(Px_H);
+handles.FN2_y=num2str(Py_H);
+handles.IT1_x=num2str(Intetrochanter_x1);
+handles.IT1_y=num2str(Intetrochanter_y1);
+handles.IT2_x=num2str(Intetrochanter_x2);
+handles.IT2_y=num2str(Intetrochanter_y2);
+handles.FS1_x=num2str(shaftx(1));
+handles.FS1_y=num2str(shafty(1));
+handles.FS2_x=num2str(shaftx(2));
+handles.FS2_y=num2str(shafty(2));
+handles.HEAD_x=num2str(head_x);
+handles.HEAD_y=num2str(head_y);
+handles.CP_x=num2str(Cp(1));
+handles.CP_y=num2str(Cp(2));
+guidata(hObject,handles);
+
 % hObject    handle to pushbutton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -496,6 +663,84 @@ function edit4_CreateFcn(hObject, eventdata, handles)
 % handles    empty - handles not created until after all CreateFcns called
 
 % Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pushbutton4.
+function pushbutton4_Callback(hObject, eventdata, handles)
+
+
+% hObject    handle to pushbutton4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes during object creation, after setting all properties.
+function figure1_CreateFcn(hObject, eventdata, handles)
+conn = database('seg_results','admin','123456');
+handles.conn=conn;
+guidata(hObject,handles);
+
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+close(handles.conn);
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: delete(hObject) closes the figure
+delete(hObject);
+
+
+% --- Executes on button press in pushbutton5.
+function pushbutton5_Callback(hObject, eventdata, handles)
+
+
+colnames = {'Image_Name'  'EI_FN' 'EI_IT' 'EI_FS' 'EA_FN' 'EA_IT' 'EA_FS' 'GA_FN' 'GA_IT' 'GA_FS' 'FN1_x' 'FN1_y' 'FN2_x' 'FN2_y' 'IT1_x' 'IT1_y' 'IT2_x' 'IT2_y' 'FS1_x' 'FS1_y' 'FS2_x' 'FS2_y' 'HEAD_x' 'HEAD_y' 'CP_x' 'CP_y'};
+edata={handles.Image_name, handles.EA_FN, handles.EA_IT, handles.EA_FS, handles.EI_FN, handles.EI_IT, handles.EI_FS, handles.GA_FN, handles.GA_IT, handles.GA_FS, handles.FN1_x, handles.FN1_y, ...
+    handles.FN2_x, handles.FN2_y, handles.IT1_x, handles.IT1_y, handles.IT2_x, handles.IT2_y, handles.FS1_x, handles.FS1_y, handles.FS2_x, handles.FS2_y, handles.HEAD_x, handles.HEAD_y, handles.CP_x, handles.CP_y};
+curs=exec(handles.conn, strcat('select Image_name from results where Image_name= ''', handles.Image_name, ''''));
+curs=fetch(curs);
+isem=strcmp(curs.Data, 'No Data');
+if (1 == isem)
+    insert(handles.conn, 'results', colnames, edata);
+    sqlquery = 'commit';
+    exec(handles.conn,sqlquery);
+else
+    whereclause = strcat('where Image_Name = ''', handles.Image_name, '''');
+    update(handles.conn,'results',colnames,edata,whereclause);    
+end
+
+% hObject    handle to pushbutton5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on selection change in listbox2.
+function listbox2_Callback(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns listbox2 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listbox2
+
+
+% --- Executes during object creation, after setting all properties.
+function listbox2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
