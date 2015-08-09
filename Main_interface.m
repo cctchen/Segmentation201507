@@ -94,7 +94,7 @@ guidata(hObject,handles);%save those things into this two capacity.
 
 % --- Executes on selection change in listbox1.
 function listbox1_Callback(hObject, eventdata, handles)
-index_selected = get(handles.listbox1,'Value');%  get the number in order of the cases when click the case name in the box1
+index_selected = get(handles.listbox1,'Value');%  get the number in the order of the cases when click the case name in the box1
 axes(handles.axes1);%display the pic in ases1
 dcm_pic=dicomread(handles.Dicom_list{index_selected});
 imshow(dcm_pic);
@@ -185,7 +185,7 @@ FUC=1.073;
 INTERCEPT=-1024.3;
 SLOP=1.2882;
 Pixel_scale=0.97656e-3;
-mu=0.4;
+mu=0.3;
 
 axes(handles.axes2);
 % read two curves
@@ -263,10 +263,12 @@ while((nfn_x1 < handles.size_outl) && (nfn_x1 > 0) && (handles.BWoutline(nfn_y1,
     if((nfn_x1 ~=ei_px) || (nfn_y1 ~= ei_py ))
         ei_px=nfn_x1;
         ei_py=nfn_y1;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
-        EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
-        EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+        if (handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+            EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
+            EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);   
+        end
     end
     if ((handles.BWoutline(nfn_y1-1,nfn_x1) == 1) && (handles.BWoutline(nfn_y1,nfn_x1+1) == 1))
         break;
@@ -279,17 +281,19 @@ nfn_x2=M_x;
 nfn_y2=M_y;
 ei_px=nfn_x2;
 ei_py=nfn_y2;
-while((nfn_x2 < handles.size_outl) && (nfn_x2 > 0) && handles.BWoutline(nfn_y2,nfn_x2) ~= 1)
+while((nfn_x2 < handles.size_outl) && (nfn_x2 > 0) && handles.BWoutline(nfn_y2,nfn_x2) ~= 1)%??????????????????????????
     Vplus2=r*V2;
     nfn_x2=round(M_x + real(Vplus2));
     nfn_y2=round(M_y + imag(Vplus2));
-    if((nfn_x2 ~=ei_px) || (nfn_y2 ~= ei_py ))
+    if((nfn_x2 ~=ei_px) || (nfn_y2 ~= ei_py ))% if they equal, that means they are in the same pixel value, so do not need to calculate again.
         ei_px=nfn_x2;
         ei_py=nfn_y2;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=(double(29.8)*(double((1e-3))*double(rou))^1.56)*1e9;
-        EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
-        EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        if(handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=(double(29.8)*(double((1e-3))*double(rou))^1.56)*1e9;
+            EA_FN=EA_FN + double(double(E)*double(Pixel_scale^2));
+            EI_FN = EI_FN + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        end
     end
     if ((handles.BWoutline(nfn_y2,nfn_x2-1) == 1) && (handles.BWoutline(nfn_y2+1,nfn_x2) == 1))
         break;
@@ -399,10 +403,12 @@ while((Intetrochanter_x1 < handles.size_outl) && (Intetrochanter_x1 > 0) && (han
     if((Intetrochanter_x1 ~=ei_px) || (Intetrochanter_y1 ~= ei_py ))
         ei_px=Intetrochanter_x1;
         ei_py=Intetrochanter_y1;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
-        EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
-        EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+        if(handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+            EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
+            EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2); 
+        end
     end
     if ((handles.BWoutline(Intetrochanter_y1-1,Intetrochanter_x1) == 1) && (handles.BWoutline(Intetrochanter_y1,Intetrochanter_x1+1) == 1))
         break;
@@ -423,10 +429,12 @@ while((Intetrochanter_x2 < handles.size_outl) && (Intetrochanter_x2 > 0) && hand
     if((Intetrochanter_x2 ~=ei_px) || (Intetrochanter_y2 ~= ei_py ))
         ei_px=Intetrochanter_x2;
         ei_py=Intetrochanter_y2;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
-        EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
-        EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        if(handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+            EA_IT=EA_IT + double(double(E)*double(Pixel_scale^2));
+            EI_IT = EI_IT + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        end
     end
     if ((handles.BWoutline(Intetrochanter_y2,Intetrochanter_x2-1) == 1) && (handles.BWoutline(Intetrochanter_y2+1,Intetrochanter_x2) == 1))
         break;
@@ -434,7 +442,7 @@ while((Intetrochanter_x2 < handles.size_outl) && (Intetrochanter_x2 > 0) && hand
     r=r-0.5;
 end
 GA_IT=EA_IT/(2*(1+mu));
-set(handles.text16,'string',num2str(EI_IT,3));
+set(handles.text16,'string',num2str(EI_IT));%???????????
 plot([Intetrochanter_x1,Intetrochanter_x2],[Intetrochanter_y1,Intetrochanter_y2], '*-');
 
 [shafty,shaftx]=find(handles.BWoutline(Cp(2)+round(1.5*sqrt(d_min)),:));%find the two points of the shaft line
@@ -456,15 +464,17 @@ EA_FS=double(double(E)*double(Pixel_scale^2));
 EI_FS = 0;
 while((fs_x1 < handles.size_outl) && (fs_x1 > 0) && (handles.BWoutline(fs_y1,fs_x1) ~= 1))
     Vplus1=r*V1;
-    fs_x1=round(M_x + real(Vplus1));
-    fs_y1=round(M_y + imag(Vplus1)); % along the vector to find the edge
+    fs_x1=round(Cp(1) + real(Vplus1));%??????????????
+    fs_y1=round(shafty(1)); % along the vector to find the edge
     if((fs_x1 ~=ei_px) || (fs_y1 ~= ei_py ))
         ei_px=fs_x1;
         ei_py=fs_y1;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
-        EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
-        EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);        
+        if(handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+            EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
+            EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        end
     end
     r=r+0.5;
 end
@@ -476,20 +486,22 @@ ei_px=fs_x2;
 ei_py=fs_y2;
 while((fs_x2 < handles.size_outl) && (fs_x2 > 0) && handles.BWoutline(fs_y2,fs_x2) ~= 1)
     Vplus2=r*V2;
-    fs_x2=round(M_x + real(Vplus2));
-    fs_y2=round(M_y + imag(Vplus2));
-    if((fs_x2 ~=ei_px) || (fs_y2 ~= ei_py ))
+    fs_x2=round(Cp(1) + real(Vplus2));
+    fs_y2=round(shafty(1));
+    if((fs_x2 ~=ei_px) || (fs_y2 ~= ei_py )) 
         ei_px=fs_x2;
         ei_py=fs_y2;
-        rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
-        E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
-        EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
-        EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        if(handles.I(ei_py,ei_px) > 0)
+            rou=(double(FUC)*(double(handles.I(ei_py,ei_px))-double(INTERCEPT)))/double(SLOP);%mg/cm3
+            E=double(29.8)*(double((1e-3))*double(rou))^1.56*1e9;
+            EA_FS=EA_FS + double(double(E)*double(Pixel_scale^2));
+            EI_FS = EI_FS + E*((r*Pixel_scale)^2)*double(Pixel_scale^2);
+        end
     end
     r=r+0.5;
 end
 GA_FS=EA_FS/(2*(1+mu));
-set(handles.text17,'string',num2str(EI_FS,3));
+set(handles.text17,'string',num2str(EI_FS));%??????
 
 %line([Cp(1)-20,Cp(1)+20],[Cp(2)+1.5*sqrt(d_min),Cp(2)+1.5*sqrt(d_min)]);
 axes(handles.axes2);
@@ -539,7 +551,7 @@ while((to_head_x > 1) && (to_head_x < handles.size_outl) && (handles.BWoutline(t
     r=r+0.5;
 end
 set(handles.text1,'string','');
-plot(head_x,head_y,'*');
+plot(head_x,head_y,'*'); 
 
 set(handles.edit1,'string',strcat('NFN_L_x=',int2str(Px_L),', NFN_L_y=',int2str(Py_L),'; NFN_H_x=',int2str(Px_H),', NFN_H_y=',int2str(Py_H)));
 set(handles.edit2,'string',strcat('IT_L_x=',int2str(Intetrochanter_x1),', IT_L_y=',int2str(Intetrochanter_y1),'; IT_H_x=',int2str(Intetrochanter_x2),', IT_H_y=',int2str(Intetrochanter_y2)));
@@ -712,13 +724,12 @@ curs=fetch(curs);
 isem=strcmp(curs.Data, 'No Data');
 if (1 == isem)
     insert(handles.conn, 'results', colnames, edata);
-    sqlquery = 'commit';
-    exec(handles.conn,sqlquery);
 else
     whereclause = strcat('where Image_Name = ''', handles.Image_name, '''');
     update(handles.conn,'results',colnames,edata,whereclause);    
 end
-
+sqlquery = 'commit';
+exec(handles.conn,sqlquery);
 % hObject    handle to pushbutton5 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
