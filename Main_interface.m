@@ -84,9 +84,24 @@ for ii=1:filenumber
     Dicom_name{ii}=dname;
 end
 set(handles.listbox1,'string',Dicom_name);%set the name of string to 'listbox1',which can display the name list in the box1
+
+
 handles.Dicom_list=Dicom_list;%seems like put 'Dicom_list'into 'handls'.handles like a capacity ,can include lots things,and it serves for all function.
 handles.Dicom_name=Dicom_name;
 guidata(hObject,handles);%save those things into this two capacity.
+
+axes(handles.axes1);%display the pic in ases1
+index_selected=1;
+dcm_pic=dicomread(Dicom_list{1});
+imshow(dcm_pic);
+p_Dilate=get(handles.slider1,'value');%when creat 'slider1',it has been given a default value which is 4(dilate parameter).
+handles.p_Dilate=p_Dilate;
+handles.index_selected=index_selected;
+guidata(hObject,handles);
+handles.Image_name=Dicom_name(index_selected);
+guidata(hObject,handles);%save those things into this two capacity.
+get_outline(hObject, handles, p_Dilate);
+
 % hObject    handle to pushbutton1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -246,6 +261,37 @@ M_y=round((Py_H + Py_L)/2);
 %calculate EI_FN
 V1=(Px_L - M_x + (Py_L - M_y)*i)/abs(Px_L - M_x + (Py_L - M_y)*i);
 V2=(Px_H - M_x + (Py_H - M_y)*i)/abs(Px_H - M_x + (Py_H - M_y)*i);
+
+ex_L=10;
+V_hight=5/0.97656;
+
+V_AL_1=ex_L*V1+V_hight*V1*(-i);
+V_AL_2=ex_L*V1+V_hight*V1*i;
+
+V_AH_1=ex_L*V2+V_hight*V2*(-i);
+V_AH_2=ex_L*V2+V_hight*V2*i;
+
+POLY_x=[real(V_AL_1)+Px_L, real(V_AL_2)+Px_L, real(V_AH_1)+Px_H, real(V_AH_2)+Px_H];
+POLY_y=[imag(V_AL_1)+Py_L, imag(V_AL_2)+Py_L, imag(V_AH_1)+Py_H, imag(V_AH_2)+Py_H];
+POLY_x_show=[real(V_AL_1)+Px_L, real(V_AL_2)+Px_L, real(V_AH_1)+Px_H, real(V_AH_2)+Px_H, real(V_AL_1)+Px_L];
+POLY_y_show=[imag(V_AL_1)+Py_L, imag(V_AL_2)+Py_L, imag(V_AH_1)+Py_H, imag(V_AH_2)+Py_H, imag(V_AL_1)+Py_L];
+plot(POLY_x_show, POLY_y_show, 'r-');
+xa = 1 : size(handles.I,2);
+ya = 1 : size(handles.I,1);
+[xq,yq] = meshgrid(xa,ya);
+[in]=inpolygon(xq,yq,POLY_x,POLY_y);
+I_rec = and(in, handles.I);
+[Rec_y,Rec_x]=find(I_rec);
+Rec_size=size(Rec_x);
+Rec_pixel_sum=0;
+for(ii=1:Rec_size(1))
+    Rec_pixel_sum=double(Rec_pixel_sum) + double(handles.I(Rec_y(ii),Rec_x(ii)));
+end
+
+Ave_Pixel= Rec_pixel_sum/(Rec_size(1)*Pixel_scale^2);
+
+set(handles.text19,'string',int2str(Rec_pixel_sum));
+set(handles.text20,'string',int2str(Ave_Pixel));
 
 r=1;
 nfn_x1=M_x;
